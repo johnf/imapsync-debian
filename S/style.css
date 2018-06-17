@@ -1,0 +1,85 @@
+
+/* $Id: style.css,v 1.13 2018/01/29 02:07:02 gilles Exp gilles $ */
+
+/* http://www.w3schools.com/html/html5_browsers.asp */
+
+/*
+header, section, footer, aside, nav, main, article, figure {
+    display: inline-block;
+}
+*/
+
+body {
+  color: black;
+  background-color: #eeffff;
+}
+
+@media screen and ( min-width: 960px ) {
+  #left-menu {
+    float: left;
+    width: 50%;
+  }
+
+  #centered-logo {
+    float: left;
+    width: 50%;
+  }
+
+  #right-tronche {
+  float: right;
+  width: 60%;
+  }
+
+  }
+
+@media screen and ( min-width: 1280px ) {
+  #left-menu {
+    float: left;
+    width: 40%;
+  }
+
+  #centered-logo {
+    float: left;
+    width: 60%;
+  }
+}
+
+
+
+@media screen and ( min-width: 960px ) {
+  div.list {
+    display: inline-block; 
+    vertical-align: top; 
+  }
+}
+
+div.poll {
+  display: inline-block;
+  vertical-align: top;
+}
+
+
+
+div.center {
+  text-align: center;
+}
+
+img {
+  border: 0;
+}
+
+.none
+{
+   /* list-style-type: none; 
+   */
+}
+
+.bold 
+{
+     font-weight:bold;   
+}
+
+.smaller
+{
+	font-size: smaller;
+}

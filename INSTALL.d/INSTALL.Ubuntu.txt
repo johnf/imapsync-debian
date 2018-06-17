@@ -1,0 +1,88 @@
+#!/bin/cat 
+# $Id: INSTALL.Ubuntu.txt,v 1.12 2018/05/06 15:03:29 gilles Exp gilles $
+
+=================================================
+= Installing imapsync on Ubuntu 16.04 or higher =
+=================================================
+
+Here is  the command to install imapsync dependencies,
+you need root privilege to run them.
+
+This command installs standard Ubuntu packages:
+
+  sudo apt-get install \
+libauthen-ntlm-perl    \
+libclass-load-perl     \
+libcrypt-ssleay-perl   \
+libdata-uniqid-perl    \
+libdigest-hmac-perl    \
+libdist-checkconflicts-perl \
+libfile-copy-recursive-perl \
+libio-compress-perl     \
+libio-socket-inet6-perl \
+libio-socket-ssl-perl   \
+libio-tee-perl          \
+libmail-imapclient-perl \
+libmodule-scandeps-perl \
+libnet-ssleay-perl      \
+libpar-packer-perl      \
+libreadonly-perl        \
+libregexp-common-perl   \
+libsys-meminfo-perl     \
+libterm-readkey-perl    \
+libtest-fatal-perl      \
+libtest-mock-guard-perl \
+libtest-pod-perl        \
+libtest-requires-perl   \
+libtest-simple-perl     \
+libunicode-string-perl  \
+liburi-perl             \
+libtest-nowarnings-perl \
+libtest-deep-perl       \
+libtest-warn-perl       \
+make                    \
+cpanminus
+
+In case you want to update the Perl module 
+Mail::IMAPClient, a major module for imapsync,
+the following command installs it "manually":
+
+  sudo cpanm Mail::IMAPClient
+
+In case you need to use XOAUTH2 authentication you have to install   
+the module JSON::WebToken with the command:
+
+  sudo cpanm JSON::WebToken
+
+After installing the dependencies, imapsync should be working.
+
+You don't have to be root to test and use imapsync.
+Take the compressed tarball called imapsync-1.xxx.tgz
+where 1.xxx is the version number. 
+Untar the tarball where you want:
+
+  cd 
+  tar xzvf  imapsync-1.xxx.tgz
+
+Go into the directory imapsync-1.xxx
+
+  cd imapsync-1.xxx
+
+A dependencies test that shows also the basic example:
+
+  ./imapsync
+
+A live test showing imapsync job:
+
+  ./imapsync --testslive
+
+Now the install command (need root priviledges again):
+
+  cp imapsync /usr/bin/
+
+That's finished for the installation part.
+You can use imapsync.
+
+Now go to read http://imapsync.lamiral.info/#doc
+start with the tutorial.
+

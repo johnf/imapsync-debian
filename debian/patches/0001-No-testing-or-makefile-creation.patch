@@ -1,0 +1,21 @@
+From: John Ferlito <johnf@inodes.org>
+Date: Sun, 17 Jun 2018 16:12:52 +1000
+Subject: No testing or makefile creation
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 7178858..0a79ec7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -165,7 +165,7 @@ clean_man:
+ W/imapsync.1: imapsync
+ 	pod2man imapsync > W/imapsync.1
+ 
+-install: testp W/imapsync.1
++install:
+ 	mkdir -p $(DESTDIR)$(PREFIX)/bin
+ 	install imapsync $(DESTDIR)$(PREFIX)/bin/imapsync
+ 	chmod 755 $(DESTDIR)$(PREFIX)/bin/imapsync

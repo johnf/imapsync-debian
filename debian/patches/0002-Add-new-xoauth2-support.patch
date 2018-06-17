@@ -1,0 +1,150 @@
+From: John Ferlito <johnf@inodes.org>
+Date: Sun, 17 Jun 2018 18:26:00 +1000
+Subject: Add new xoauth2 support
+
+---
+ imapsync | 98 +++++++++++++++++++++++++++++++++++++++++-----------------------
+ 1 file changed, 63 insertions(+), 35 deletions(-)
+
+diff --git a/imapsync b/imapsync
+index cfbd1ee..8df28bf 100755
+--- a/imapsync
++++ b/imapsync
+@@ -4514,8 +4514,12 @@ sub plainauth {
+ #
+ # If the password arg ends in .json, it will assume this new json method, otherwise it
+ # will fallback to the "oauth client id;.p12" format it was previously using.
++#
++# 2018/06/17: Switched away from service accounts as it seems this isn't supported anymore
++# https://github.com/imapsync/imapsync/issues/87
+ sub xoauth2 {
+         require JSON::WebToken ;
++        require HTTP::Request ;
+         require LWP::UserAgent ;
+         require HTML::Entities ;
+         require JSON ;
+@@ -4527,7 +4531,11 @@ sub xoauth2 {
+         my $code = shift;
+         my $imap = shift;
+ 
+-        my ($iss,$key);
++        my ($xoauth2_string);
++
++        my $ua = LWP::UserAgent->new(  ) ;
++        # $ua->timeout(10);
++        $ua->env_proxy(  ) ;
+ 
+         if( $imap->Password =~ /^(.*\.json)$/x ) {
+             my $json = JSON->new( ) ;
+@@ -4537,14 +4545,37 @@ sub xoauth2 {
+             my $jsonfile = $json->decode( join q{}, <$FILE> ) ;
+             close $FILE ;
+ 
+-            $iss = $jsonfile->{client_id};
+-            $key = $jsonfile->{private_key};
+-            $debug and myprint( "Service account: $iss\n");
+-            $debug and myprint( "Private key:\n$key\n");
++            if ($jsonfile->{private_key}) {
++               die_clean('The old service account OAUTH2 mechanism is no longer supported') ;
++            }
++
++            my $client_id = $jsonfile->{client_id};
++            my $client_secret = $jsonfile->{client_secret};
++            my $refresh_token = $jsonfile->{refresh_token};
++            my $scope_string = "https%3A%2F%2Fmail.google.com%2F";
++            $debug and myprint( "Client Id: $client_id\n");
++            $debug and myprint( "Client Secret: $client_secret\n");
++            $debug and myprint( "Refresh Token: $refresh_token\n");
++
++            my $req = HTTP::Request->new( POST => 'https://accounts.google.com/o/oauth2/token' );
++            $req->content_type( 'application/x-www-form-urlencoded' );
++            $req->content( "client_id=$client_id&client_secret=$client_secret&refresh_token=$refresh_token&grant_type=refresh_token" );
++            my $response = $ua->request( $req );
++
++            unless( $response->is_success(  ) ) {
++                    die_clean( $response->code, "\n", $response->content, "\n" ) ;
++            }else{
++                    $debug and myprint( $response->content  ) ;
++            }
++
++            my $data = JSON::decode_json( $response->content ) ;
++            $debug and myprint( "Access Token: $data->{access_token}\n");
++
++            $xoauth2_string = encode_base64("user=". $imap->User ."\x01auth=Bearer ". $data->{access_token} ."\x01\x01", '');
+         }
+         else {
+             # Get iss (service account address), keyfile name, and keypassword if necessary
+-            ( $iss, my $keyfile, my $keypass ) = $imap->Password =~ /([\-\d\w\@\.]+);([a-zA-Z0-9 \_\-\.\/]+);?(.*)?/x ;
++            my ( $iss, $keyfile, $keypass ) = $imap->Password =~ /([\-\d\w\@\.]+);([a-zA-Z0-9 \_\-\.\/]+);?(.*)?/x ;
+ 
+             # Assume key password is google default if not provided
+             $keypass = 'notasecret' if not $keypass;
+@@ -4552,42 +4583,39 @@ sub xoauth2 {
+             $debug and myprint( "Service account: $iss\nKey file: $keyfile\nKey password: $keypass\n");
+ 
+             # Get private key from p12 file (would be better in perl...)
+-            $key = `openssl pkcs12 -in "$keyfile" -nodes -nocerts -passin pass:$keypass -nomacver`;
++            my $key = `openssl pkcs12 -in "$keyfile" -nodes -nocerts -passin pass:$keypass -nomacver`;
+ 
+             $debug and myprint( "Private key:\n$key\n");
+-        }
+-
+-        # Create jwt of oauth2 request
+-        my $time = time ;
+-        my $jwt = JSON::WebToken->encode( {
+-        'iss' => $iss, # service account
+-        'scope' => 'https://mail.google.com/',
+-        'aud' => 'https://www.googleapis.com/oauth2/v3/token',
+-        'exp' => $time + $DEFAULT_EXPIRATION_TIME_OAUTH2_PK12,
+-        'iat' => $time,
+-        'prn' => $imap->User # user to auth as
+-        },
+-        $key, 'RS256', {'typ' => 'JWT'} ); # Crypt::OpenSSL::RSA needed here.
+ 
+-        # Post oauth2 request
+-        my $ua = LWP::UserAgent->new(  ) ;
+-        $ua->env_proxy(  ) ;
++            # Create jwt of oauth2 request
++            my $time = time ;
++            my $jwt = JSON::WebToken->encode( {
++            'iss' => $iss, # service account
++            'scope' => 'https://mail.google.com/',
++            'aud' => 'https://www.googleapis.com/oauth2/v3/token',
++            'exp' => $time + $DEFAULT_EXPIRATION_TIME_OAUTH2_PK12,
++            'iat' => $time,
++            'prn' => $imap->User # user to auth as
++            },
++            $key, 'RS256', {'typ' => 'JWT'} ); # Crypt::OpenSSL::RSA needed here.
+ 
+-        my $response = $ua->post('https://www.googleapis.com/oauth2/v3/token',
+-        { grant_type => HTML::Entities::encode_entities('urn:ietf:params:oauth:grant-type:jwt-bearer'),
+-        assertion => $jwt } ) ;
++            # Post oauth2 request
++            my $response = $ua->post('https://www.googleapis.com/oauth2/v3/token',
++            { grant_type => HTML::Entities::encode_entities('urn:ietf:params:oauth:grant-type:jwt-bearer'),
++            assertion => $jwt } ) ;
+ 
+-        unless( $response->is_success(  ) ) {
+-                die_clean( $response->code, "\n", $response->content, "\n" ) ;
+-        }else{
+-                $debug and myprint( $response->content  ) ;
+-        }
++            unless( $response->is_success(  ) ) {
++                    die_clean( $response->code, "\n", $response->content, "\n" ) ;
++            }else{
++                    $debug and myprint( $response->content  ) ;
++            }
+ 
+-        # access_token in response is what we need
+-        my $data = JSON::decode_json( $response->content ) ;
++            # access_token in response is what we need
++            my $data = JSON::decode_json( $response->content ) ;
+ 
+-        # format as oauth2 auth data
+-        my $xoauth2_string = encode_base64( 'user=' . $imap->User . "\1auth=Bearer " . $data->{access_token} . "\1\1", q{} ) ;
++            # format as oauth2 auth data
++            $xoauth2_string = encode_base64( 'user=' . $imap->User . "\1auth=Bearer " . $data->{access_token} . "\1\1", q{} ) ;
++        }
+ 
+         $debug and myprint( "XOAUTH2 String: $xoauth2_string\n");
+         return($xoauth2_string);

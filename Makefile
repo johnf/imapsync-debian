@@ -165,7 +165,7 @@ clean_man:
 W/imapsync.1: imapsync
 	pod2man imapsync > W/imapsync.1
 
-install: testp W/imapsync.1
+install:
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	install imapsync $(DESTDIR)$(PREFIX)/bin/imapsync
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/imapsync
